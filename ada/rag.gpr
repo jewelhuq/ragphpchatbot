@@ -1,0 +1,56 @@
+--  rag.gpr
+--  GNAT Project file for the Ada RAG implementation.
+--
+--  Build with:
+--    gprbuild -P rag.gpr
+--
+--  This produces four executables in bin/:
+--    bin/ingest   -- ingest documents into Turso
+--    bin/query    -- retrieve chunks for a query (no LLM answer)
+--    bin/rag      -- one-shot RAG question-answer
+--    bin/chatbot  -- interactive multi-turn chatbot
+--
+--  GNAT Project Language notes:
+--    * "for Source_Dirs" lists directories that the compiler scans for .ads
+--      and .adb files.  We list "src" explicitly; there are no subdirectories.
+--    * "for Main" lists the compilation units that contain main procedures.
+--      Each name corresponds to a .adb file in Source_Dirs.
+--    * Builder.Default_Switches applies to every compilation unit.
+
+project Rag is
+
+   for Source_Dirs use ("src");
+   for Object_Dir  use "obj";
+   for Exec_Dir    use "bin";
+
+   --  List every compilation unit that contains a main procedure.
+   for Main use ("ingest.adb", "query.adb", "rag.adb", "chatbot.adb");
+
+   package Builder is
+      for Default_Switches ("Ada") use
+        ("-g",    --  Include debug information (safe to keep; has no run-time cost)
+         "-O2");  --  Optimise for speed (level 2 is production-grade)
+   end Builder;
+
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-gnat2012",    --  Use Ada 2012 standard (required for Pre/Post contracts)
+         "-gnata",       --  Enable assertion checking (activates Pre/Post at run time)
+         "-gnatwae",     --  Enable all warnings and treat them as errors
+         "-gnatVa",      --  Enable all validity checks (catches uninitialised data)
+         "-fstack-check" --  Insert run-time stack overflow checks
+         );
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use ("-g");
+   end Linker;
+
+   package Binder is
+      --  -Es: include the full exception stack trace in run-time messages.
+      --  WHY: in safety-critical post-mortem analysis we need to know not
+      --  just what exception fired but the exact call chain that led to it.
+      for Default_Switches ("Ada") use ("-Es");
+   end Binder;
+
+end Rag;
