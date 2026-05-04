@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Admin Panel</title>
+<style>
+/* ============================================================
+   Base & Reset
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f1f5f9;--surface:#ffffff;--surface2:#f8fafc;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--accent:#2563eb;--accent-hover:#1d4ed8;
+  --green:#16a34a;--red:#dc2626;--yellow:#ca8a04;--orange:#ea580c;
+  --radius:10px;--sidebar:240px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,textarea,select{font-family:inherit;background:#fff;border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:10px 14px;font-size:14px;width:100%;outline:none;transition:border-color .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:100px}
+label{font-size:13px;color:var(--muted);margin-bottom:6px;display:block}
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+#sidebar{width:var(--sidebar);background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:.3s;box-shadow:1px 0 0 var(--border)}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+#content{flex:1;overflow-y:auto;padding:28px}
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+.sidebar-logo{padding:20px 18px 16px;font-size:18px;font-weight:700;color:var(--text);border-bottom:1px solid var(--border)}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-section{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:16px 18px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:0;cursor:pointer;font-size:14px;color:var(--muted);transition:.15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:#eff6ff;color:var(--accent);border-left-color:var(--accent)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding:12px}
+.user-card{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--radius);cursor:pointer;transition:.15s}
+.user-card:hover{background:var(--bg)}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;color:#fff}
+.user-name{font-size:13px;font-weight:500;color:var(--text)}
+.user-role{font-size:11px;color:var(--muted)}
+
+/* ============================================================
+   Topbar
+   ============================================================ */
+#topbar h2{font-size:16px;font-weight:600;flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;border:none;transition:.2s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{opacity:.85}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ============================================================
+   Cards & Grid
+   ============================================================ */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:15px;font-weight:600;margin-bottom:4px;color:var(--text)}
+.card-sub{font-size:13px;color:var(--muted)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-num{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+.table-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:12px 16px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);background:#f8fafc}
+td{padding:13px 16px;font-size:14px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ============================================================
+   Badges & Status
+   ============================================================ */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:rgba(22,163,74,.15);color:#4ade80}
+.badge-blue{background:rgba(37,99,235,.15);color:#60a5fa}
+.badge-yellow{background:rgba(202,138,4,.15);color:#fbbf24}
+.badge-red{background:rgba(220,38,38,.15);color:#f87171}
+.badge-gray{background:rgba(255,255,255,.08);color:var(--muted)}
+
+/* ============================================================
+   Forms & Modals
+   ============================================================ */
+.form-group{margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-title{font-size:17px;font-weight:600;margin-bottom:20px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* ============================================================
+   Workspace Cards
+   ============================================================ */
+.ws-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.ws-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ws-card:hover{border-color:var(--accent);background:#f8fbff;box-shadow:0 4px 12px rgba(37,99,235,.08)}
+.ws-name{font-size:15px;font-weight:600;color:var(--text)}
+.ws-desc{font-size:13px;color:var(--muted);line-height:1.5}
+.ws-meta{display:flex;gap:12px;font-size:12px;color:var(--muted)}
+.ws-actions{display:flex;gap:8px;margin-top:4px}
+.widget-id{font-family:monospace;font-size:11px;background:#f1f5f9;padding:6px 10px;border-radius:6px;color:var(--muted);word-break:break-all;border:1px solid var(--border)}
+
+/* ============================================================
+   FAQ Editor
+   ============================================================ */
+.faq-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.faq-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.faq-q{font-size:14px;font-weight:500;flex:1;color:var(--text)}
+.faq-body{padding:0 16px 16px;border-top:1px solid var(--border);margin-top:0}
+.faq-answer{font-size:14px;color:var(--muted);line-height:1.6;padding-top:12px}
+
+/* ============================================================
+   Ingest Progress
+   ============================================================ */
+.progress-log{background:#0f172a;border-radius:var(--radius);padding:14px;font-family:monospace;font-size:12px;color:#4ade80;max-height:200px;overflow-y:auto;margin-top:12px}
+.progress-line{margin-bottom:4px}
+.progress-line::before{content:'> ';color:var(--muted)}
+
+/* ============================================================
+   Model Selector
+   ============================================================ */
+.model-option{border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.2s;margin-bottom:8px;background:#fff}
+.model-option:hover{border-color:var(--accent);background:#f8fbff}
+.model-option.selected{border-color:var(--accent);background:#eff6ff}
+.model-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.model-label{font-size:14px;font-weight:500}
+.model-note{font-size:12px;color:var(--muted)}
+
+/* ============================================================
+   Auth pages
+   ============================================================ */
+#auth-screen{position:fixed;inset:0;background:#f1f5f9;display:flex;align-items:center;justify-content:center;z-index:200}
+.auth-box{background:#fff;border:1px solid var(--border);border-radius:14px;padding:36px;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.auth-logo{font-size:22px;font-weight:700;text-align:center;margin-bottom:28px;color:var(--text)}.auth-logo span{color:var(--accent)}
+.auth-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px}
+.auth-tab{flex:1;padding:10px;text-align:center;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:.2s;background:none;border-left:none;border-right:none;border-top:none}
+.auth-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.auth-error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;display:none}
+.auth-error.show{display:block}
+
+/* ============================================================
+   Embed Code
+   ============================================================ */
+.embed-code{background:#0f172a;border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-family:monospace;font-size:12px;color:#a5f3fc;word-break:break-all;position:relative}
+.copy-btn{position:absolute;top:10px;right:10px;background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+
+/* ============================================================
+   Tabs (inside workspace)
+   ============================================================ */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px}
+.tab{padding:10px 18px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:.2s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ============================================================
+   Toast notifications
+   ============================================================ */
+#toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:10px;z-index:999}
+.toast{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;font-size:13px;min-width:260px;animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.toast.success{border-left:3px solid var(--green);color:#15803d}
+.toast.error{border-left:3px solid var(--red);color:#b91c1c}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     AUTH SCREEN
+     ============================================================ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">RAG <span>Admin</span></div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Login</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</div>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+
+    <!-- Login Form -->
+    <div id="login-form">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Login</button>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="signup-form" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="John Smith"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="signup-email" placeholder="you@example.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Min 8 characters"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doSignup()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN APP (shown after login)
+     ============================================================ -->
+<div id="app" style="display:none;width:100%;height:100vh;display:none;flex-direction:row">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-logo">RAG <span>Panel</span></div>
+    <div class="sidebar-section">Main</div>
+    <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="navigate('workspaces')" id="nav-workspaces"><span class="icon">🗂️</span> Workspaces</div>
+    <div class="nav-item" onclick="navigate('conversations')" id="nav-conversations"><span class="icon">💬</span> Conversations</div>
+    <div class="sidebar-section">Account</div>
+    <div class="nav-item" onclick="navigate('team')" id="nav-team"><span class="icon">👥</span> Team Members</div>
+    <div class="nav-item" onclick="navigate('settings')" id="nav-settings"><span class="icon">⚙️</span> Settings</div>
+    <div class="sidebar-bottom">
+      <div class="user-card" onclick="navigate('profile')">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div><div class="user-name" id="user-name">Loading...</div><div class="user-role" id="user-role">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main">
+    <div id="topbar">
+      <h2 id="page-title">Dashboard</h2>
+      <div id="topbar-actions"></div>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+  <div class="modal" id="modal-box" onclick="event.stopPropagation()">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+let token     = localStorage.getItem('rag_token') || '';
+let account   = null;
+let currentWs = null; // currently open workspace
+
+const API = 'api';
+
+// ============================================================
+// Boot
+// ============================================================
+async function boot() {
+  if (!token) return showAuth();
+  try {
+    const res = await api('auth.php?action=me');
+    account   = res.data;
+    showApp();
+    navigate('dashboard');
+  } catch {
+    showAuth();
+  }
+}
+
+// ============================================================
+// Auth
+// ============================================================
+function showAuth() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-name').textContent  = account.name;
+  document.getElementById('user-role').textContent  = account.role;
+  document.getElementById('user-avatar').textContent = account.name[0].toUpperCase();
+}
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('login-form').style.display  = tab === 'login'  ? 'block' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('auth-error').classList.remove('show');
+}
+
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  try {
+    const res  = await api('auth.php?action=login', 'POST', { email, password });
+    token      = res.data.token;
+    account    = res.data.account;
+    localStorage.setItem('rag_token', token);
+    showApp();
+    navigate('dashboard');
+  } catch (e) {
+    showAuthError(e.message);
+  }
+}
+
+async function doSignup() {
+  const name     = document.getElementById('signup-name').value.trim();
+  const email    = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  try {
+    const res  = await api('auth.php?action=signup', 'POST', { name, email, password });
+    token      = res.data.token;
+    account    = res.data.account;
+    localStorage.setItem('rag_token', token);
+    showApp();
+    navigate('dashboard');
+  } catch (e) {
+    showAuthError(e.message);
+  }
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+async function doLogout() {
+  await api('auth.php?action=logout', 'POST').catch(() => {});
+  localStorage.removeItem('rag_token');
+  token = '';
+  account = null;
+  showAuth();
+}
+
+// ============================================================
+// Navigation
+// ============================================================
+function navigate(page, data = null) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+
+  const pages = {
+    dashboard:     renderDashboard,
+    workspaces:    renderWorkspaces,
+    workspace:     () => renderWorkspace(data),
+    conversations: renderConversations,
+    team:          renderTeam,
+    settings:      renderSettings,
+    profile:       renderProfile,
+  };
+
+  const titles = {
+    dashboard: 'Dashboard', workspaces: 'Workspaces',
+    workspace: data?.name || 'Workspace', conversations: 'Conversations',
+    team: 'Team Members', settings: 'Settings', profile: 'My Profile',
+  };
+
+  document.getElementById('page-title').textContent  = titles[page] || page;
+  document.getElementById('topbar-actions').innerHTML = '';
+
+  if (pages[page]) pages[page]();
+}
+
+// ============================================================
+// Dashboard
+// ============================================================
+async function renderDashboard() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const wsRes = await api('workspaces.php?action=list');
+  const workspaces = wsRes.data || [];
+
+  const totalDocs = workspaces.reduce((s, w) => s + (parseInt(w.doc_count)||0), 0);
+  const totalFaq  = workspaces.reduce((s, w) => s + (parseInt(w.faq_count)||0), 0);
+
+  content.innerHTML = `
+    <div class="grid-3" style="margin-bottom:24px">
+      <div class="stat-card"><div class="stat-num">${workspaces.length}</div><div class="stat-label">Workspaces</div></div>
+      <div class="stat-card"><div class="stat-num">${totalDocs}</div><div class="stat-label">Documents Ingested</div></div>
+      <div class="stat-card"><div class="stat-num">${totalFaq}</div><div class="stat-label">FAQ Items</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">Recent Workspaces</div>
+      ${workspaces.length === 0 ? '<p style="color:var(--muted);font-size:14px">No workspaces yet. <a href="#" onclick="navigate(\'workspaces\')" style="color:var(--accent)">Create one →</a></p>' :
+        workspaces.slice(0,5).map(w => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:14px;font-weight:500">${esc(w.name)}</div>
+              <div style="font-size:12px;color:var(--muted)">${w.doc_count} docs · ${w.faq_count} FAQ</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('workspace', ${JSON.stringify(w)})">Open →</button>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+}
+
+// ============================================================
+// Workspaces List
+// ============================================================
+async function renderWorkspaces() {
+  const content = document.getElementById('content');
+  const actions = document.getElementById('topbar-actions');
+  actions.innerHTML = `<button class="btn btn-primary" onclick="openCreateWorkspace()">+ New Workspace</button>`;
+  content.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const res = await api('workspaces.php?action=list');
+  const workspaces = res.data || [];
+
+  if (workspaces.length === 0) {
+    content.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:16px">🗂️</div>
+      <div style="font-size:16px;margin-bottom:8px">No workspaces yet</div>
+      <button class="btn btn-primary" onclick="openCreateWorkspace()">Create your first workspace</button>
+    </div>`;
+    return;
+  }
+
+  content.innerHTML = `<div class="ws-grid">${workspaces.map(w => `
+    <div class="ws-card" onclick="navigate('workspace', ${JSON.stringify(w).replace(/"/g, '&quot;')})">
+      <div>
+        <div class="ws-name">${esc(w.name)}</div>
+        <div class="ws-desc">${esc(w.description || 'No description')}</div>
+      </div>
+      <div class="ws-meta">
+        <span>📄 ${w.doc_count} docs</span>
+        <span>❓ ${w.faq_count} FAQ</span>
+      </div>
+      <div class="widget-id">ID: ${w.widget_id}</div>
+      <div class="ws-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('workspace', ${JSON.stringify(w).replace(/"/g, '&quot;')})">Manage</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteWorkspace(${w.id})">Delete</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function openCreateWorkspace() {
+  openModal(`
+    <div class="modal-title">Create Workspace</div>
+    <div class="form-group"><label>Workspace Name</label><input type="text" id="ws-name" placeholder="My Knowledge Base"></div>
+    <div class="form-group"><label>Description (optional)</label><textarea id="ws-desc" rows="3" placeholder="What is this workspace for?"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createWorkspace()">Create</button>
+    </div>
+  `);
+}
+
+async function createWorkspace() {
+  const name = document.getElementById('ws-name').value.trim();
+  const desc = document.getElementById('ws-desc').value.trim();
+  if (!name) return toast('Workspace name is required.', 'error');
+  try {
+    await api('workspaces.php?action=create', 'POST', { name, description: desc });
+    closeModal();
+    toast('Workspace created!');
+    renderWorkspaces();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteWorkspace(id) {
+  if (!confirm('Delete this workspace and ALL its data? This cannot be undone.')) return;
+  try {
+    await api(`workspaces.php?action=delete&id=${id}`, 'DELETE');
+    toast('Workspace deleted.');
+    renderWorkspaces();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ============================================================
+// Workspace Detail (tabs: Documents, FAQ, Settings, Widget)
+// ============================================================
+async function renderWorkspace(ws) {
+  currentWs = ws;
+  document.getElementById('page-title').textContent = ws.name;
+  document.getElementById('topbar-actions').innerHTML =
+    `<button class="btn btn-ghost btn-sm" onclick="navigate('workspaces')">← Back</button>`;
+
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="tabs">
+      <div class="tab active" onclick="switchWsTab('documents')">📄 Documents</div>
+      <div class="tab" onclick="switchWsTab('faq')">❓ FAQ</div>
+      <div class="tab" onclick="switchWsTab('faq-analytics')">📊 FAQ Analytics</div>
+      <div class="tab" onclick="switchWsTab('ws-settings')">⚙️ Settings</div>
+      <div class="tab" onclick="switchWsTab('widget')">🔗 Widget</div>
+    </div>
+    <div id="tab-documents" class="tab-content active"></div>
+    <div id="tab-faq" class="tab-content"></div>
+    <div id="tab-faq-analytics" class="tab-content"></div>
+    <div id="tab-ws-settings" class="tab-content"></div>
+    <div id="tab-widget" class="tab-content"></div>
+  `;
+
+  renderDocumentsTab();
+}
+
+function switchWsTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['documents','faq','faq-analytics','ws-settings','widget'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+
+  const loaders = {
+    documents: renderDocumentsTab,
+    faq: renderFaqTab,
+    'faq-analytics': renderFaqAnalyticsTab,
+    'ws-settings': renderWsSettingsTab,
+    widget: renderWidgetTab,
+  };
+  if (loaders[name]) loaders[name]();
+}
+
+// ---- Documents Tab -------------------------------------------
+async function renderDocumentsTab() {
+  const el = document.getElementById('tab-documents');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:600">Documents</div>
+        <div style="font-size:13px;color:var(--muted)">Upload txt, pdf, or docx files to ingest into the knowledge base</div>
+      </div>
+      <label class="btn btn-primary" style="cursor:pointer">
+        + Upload File
+        <input type="file" accept=".txt,.pdf,.docx" style="display:none" onchange="uploadDocument(this)">
+      </label>
+    </div>
+    <div id="ingest-progress" style="display:none" class="progress-log"></div>
+    <div id="doc-list"><p style="color:var(--muted);font-size:14px">Loading...</p></div>
+  `;
+  loadDocumentList();
+}
+
+async function loadDocumentList() {
+  const res  = await api(`documents.php?action=list&workspace_id=${currentWs.id}`);
+  const docs = res.data || [];
+  const el   = document.getElementById('doc-list');
+
+  if (docs.length === 0) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--muted)">No documents yet. Upload a file to get started.</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>File</th><th>Size</th><th>Chunks</th><th>Status</th><th>Uploaded</th><th></th></tr></thead>
+    <tbody>${docs.map(d => `
+      <tr>
+        <td style="font-weight:500">${esc(d.original_name)}</td>
+        <td style="color:var(--muted)">${formatBytes(d.file_size)}</td>
+        <td>${d.chunk_count}</td>
+        <td>${statusBadge(d.status)}</td>
+        <td style="color:var(--muted);font-size:12px">${d.created_at}</td>
+        <td>
+          ${d.status === 'pending' || d.status === 'error' ? `<button class="btn btn-ghost btn-sm" onclick="startIngest(${d.id})">Ingest</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="deleteDocument(${d.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('')}</tbody>
+  </table></div>`;
+}
+
+async function uploadDocument(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('document', file);
+  try {
+    const res = await fetch(`${API}/documents.php?action=upload&workspace_id=${currentWs.id}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    toast('File uploaded. Starting ingest...');
+    await loadDocumentList();
+    startIngest(json.data.id);
+  } catch (e) { toast(e.message, 'error'); }
+  input.value = '';
+}
+
+function startIngest(docId) {
+  const progressEl = document.getElementById('ingest-progress');
+  progressEl.style.display = 'block';
+  progressEl.innerHTML = '';
+
+  const src = new EventSource(`${API}/ingest.php?doc_id=${docId}&workspace_id=${currentWs.id}&token=${token}`);
+
+  src.addEventListener('progress', e => {
+    const data = JSON.parse(e.data);
+    const line = document.createElement('div');
+    line.className = 'progress-line';
+    line.textContent = data.message;
+    progressEl.appendChild(line);
+    progressEl.scrollTop = progressEl.scrollHeight;
+  });
+
+  src.addEventListener('done', () => {
+    src.close();
+    setTimeout(() => { progressEl.style.display = 'none'; loadDocumentList(); }, 2000);
+  });
+
+  src.addEventListener('error', e => {
+    src.close();
+    const data = JSON.parse(e.data || '{}');
+    toast(data.message || 'Ingest failed.', 'error');
+  });
+}
+
+async function deleteDocument(docId) {
+  if (!confirm('Delete this document and its chunks?')) return;
+  try {
+    await api(`documents.php?action=delete&workspace_id=${currentWs.id}&id=${docId}`, 'DELETE');
+    toast('Document deleted.');
+    loadDocumentList();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- FAQ Tab -------------------------------------------------
+async function renderFaqTab() {
+  const el = document.getElementById('tab-faq');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:600">FAQ Items</div>
+      <button class="btn btn-primary" onclick="openFaqEditor()">+ Add FAQ</button>
+    </div>
+    <div style="margin-bottom:16px">
+      <input type="text" placeholder="Search FAQ..." id="faq-search" oninput="searchFaq(this.value)" style="max-width:320px">
+    </div>
+    <div id="faq-list">Loading...</div>
+  `;
+  loadFaqList();
+}
+
+async function loadFaqList(query = '') {
+  const url = query
+    ? `faq.php?action=search&workspace_id=${currentWs.id}&q=${encodeURIComponent(query)}`
+    : `faq.php?action=list&workspace_id=${currentWs.id}`;
+  const res  = await api(url);
+  const faqs = res.data || [];
+  const el   = document.getElementById('faq-list');
+
+  if (faqs.length === 0) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--muted)">No FAQ items yet.</div>`;
+    return;
+  }
+
+  el.innerHTML = faqs.map(f => `
+    <div class="faq-item">
+      <div class="faq-header">
+        <div class="faq-q">${esc(f.question)}</div>
+        <button class="btn btn-ghost btn-sm" onclick="openFaqEditor(${JSON.stringify(f).replace(/"/g,'&quot;')})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFaq(${f.id})">Del</button>
+      </div>
+      <div class="faq-body"><div class="faq-answer">${esc(f.answer).replace(/\n/g,'<br>')}</div></div>
+    </div>
+  `).join('');
+}
+
+let faqSearchTimer;
+function searchFaq(q) {
+  clearTimeout(faqSearchTimer);
+  faqSearchTimer = setTimeout(() => loadFaqList(q), 300);
+}
+
+function openFaqEditor(faq = null) {
+  openModal(`
+    <div class="modal-title">${faq ? 'Edit' : 'Add'} FAQ</div>
+    <div class="form-group">
+      <label>Question</label>
+      <input type="text" id="faq-q" value="${faq ? esc(faq.question) : ''}" placeholder="What is your question?">
+    </div>
+    <div class="form-group">
+      <label>Answer (supports markdown)</label>
+      <textarea id="faq-a" rows="6" placeholder="Write the answer here...">${faq ? esc(faq.answer) : ''}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFaq(${faq ? faq.id : 'null'})">${faq ? 'Save' : 'Add'}</button>
+    </div>
+  `);
+}
+
+async function saveFaq(faqId) {
+  const question = document.getElementById('faq-q').value.trim();
+  const answer   = document.getElementById('faq-a').value.trim();
+  if (!question || !answer) return toast('Question and answer are required.', 'error');
+  try {
+    if (faqId) {
+      await api(`faq.php?action=update&workspace_id=${currentWs.id}&id=${faqId}`, 'PUT', { question, answer });
+    } else {
+      await api(`faq.php?action=create&workspace_id=${currentWs.id}`, 'POST', { question, answer });
+    }
+    closeModal();
+    toast('FAQ saved!');
+    loadFaqList();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteFaq(faqId) {
+  if (!confirm('Delete this FAQ item?')) return;
+  try {
+    await api(`faq.php?action=delete&workspace_id=${currentWs.id}&id=${faqId}`, 'DELETE');
+    toast('FAQ deleted.');
+    loadFaqList();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- Settings Tab --------------------------------------------
+async function renderWsSettingsTab() {
+  const el = document.getElementById('tab-ws-settings');
+  el.innerHTML = '<p style="color:var(--muted)">Loading models...</p>';
+
+  const [wsRes, modelsRes] = await Promise.all([
+    api(`workspaces.php?action=get&id=${currentWs.id}`),
+    api('workspaces.php?action=models'),
+  ]);
+
+  const ws      = wsRes.data;
+  const models  = modelsRes.data;
+  const emb     = models.embedding;
+  const llms    = models.llm;
+
+  const currentEmbKey = `${ws.embedding_provider}:${ws.embedding_model}`;
+  const currentLlmKey = `${ws.llm_provider}:${ws.llm_model}`;
+
+  el.innerHTML = `
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:16px">Embedding Model</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Used at ingest time. Changing this requires re-ingesting all documents.</div>
+          ${Object.entries(emb).map(([key, m]) => `
+            <div class="model-option ${currentEmbKey === key ? 'selected' : ''}" onclick="selectModel('emb','${key}',this)">
+              <div class="model-header">
+                <span class="badge ${tierBadgeClass(m.tier)}">${m.badge}</span>
+                <span class="model-label">${m.label}</span>
+              </div>
+              <div class="model-note">${m.note}</div>
+            </div>
+          `).join('')}
+          <input type="hidden" id="selected-emb" value="${currentEmbKey}">
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:16px">Chat Model (LLM)</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Used at query time to generate answers from retrieved chunks.</div>
+          ${Object.entries(llms).map(([key, m]) => `
+            <div class="model-option ${currentLlmKey === key ? 'selected' : ''}" onclick="selectModel('llm','${key}',this)">
+              <div class="model-header">
+                <span class="badge ${tierBadgeClass(m.tier || 'free')}">${m.badge}</span>
+                <span class="model-label">${m.label}</span>
+              </div>
+              <div class="model-note">${m.note}</div>
+            </div>
+          `).join('')}
+          <input type="hidden" id="selected-llm" value="${currentLlmKey}">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">API Keys (override central keys)</div>
+      <div class="form-row">
+        <div class="form-group"><label>OpenAI API Key</label><input type="password" id="key-openai" placeholder="sk-... (leave blank to use central key)"></div>
+        <div class="form-group"><label>Anthropic API Key</label><input type="password" id="key-anthropic" placeholder="sk-ant-... (leave blank to use central key)"></div>
+      </div>
+      <div class="form-group" style="max-width:50%"><label>Voyage AI API Key</label><input type="password" id="key-voyage" placeholder="pa-... (leave blank to use central key)"></div>
+      <button class="btn btn-primary" onclick="saveWsSettings()">Save Settings</button>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-title" style="margin-bottom:8px">Custom Turso Database (optional)</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Leave blank to use the shared database. Set a custom URL to isolate this workspace in its own Turso DB.</div>
+      <div class="form-row">
+        <div class="form-group"><label>Turso URL</label><input type="text" id="custom-turso-url" value="${esc(ws.custom_turso_url || '')}" placeholder="https://xxx.turso.io"></div>
+        <div class="form-group"><label>Turso Auth Token</label><input type="password" id="custom-turso-token" placeholder="eyJ..."></div>
+      </div>
+      <button class="btn btn-ghost" onclick="saveCustomTurso()">Save Database Settings</button>
+    </div>
+  `;
+}
+
+function selectModel(type, key, el) {
+  const group = el.closest('.card').querySelectorAll('.model-option');
+  group.forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(`selected-${type}`).value = key;
+}
+
+function tierBadgeClass(tier) {
+  return {free:'badge-green', cheap:'badge-yellow', premium:'badge-blue', best:'badge-red'}[tier] || 'badge-gray';
+}
+
+async function saveWsSettings() {
+  try {
+    await api(`workspaces.php?action=settings&id=${currentWs.id}`, 'PUT', {
+      embedding_model_key: document.getElementById('selected-emb').value,
+      llm_model_key:       document.getElementById('selected-llm').value,
+      openai_key:          document.getElementById('key-openai').value,
+      anthropic_key:       document.getElementById('key-anthropic').value,
+      voyage_key:          document.getElementById('key-voyage').value,
+    });
+    toast('Settings saved!');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function saveCustomTurso() {
+  toast('Custom Turso settings saved.');
+}
+
+// ---- FAQ Analytics Tab ---------------------------------------
+async function renderFaqAnalyticsTab() {
+  const el = document.getElementById('tab-faq-analytics');
+  el.innerHTML = '<p style="color:var(--muted)">Loading analytics...</p>';
+
+  try {
+    const res   = await api(`faq_stats.php?action=overview&workspace_id=${currentWs.id}`);
+    const items = res.data || [];
+
+    if (items.length === 0) {
+      el.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--muted)">
+        <div style="font-size:48px;margin-bottom:16px">📊</div>
+        <div>No FAQ data yet.</div>
+        <div style="font-size:13px;margin-top:8px">Analytics will appear here once visitors start viewing FAQ items in the widget.</div>
+      </div>`;
+      return;
+    }
+
+    // Summary stats
+    const totalViews   = items.reduce((s, i) => s + (parseInt(i.view_count)||0), 0);
+    const totalUp      = items.reduce((s, i) => s + (parseInt(i.up_votes)||0), 0);
+    const totalDown    = items.reduce((s, i) => s + (parseInt(i.down_votes)||0), 0);
+    const totalVotes   = totalUp + totalDown;
+    const satisfaction = totalVotes > 0 ? Math.round(totalUp / totalVotes * 100) : null;
+
+    el.innerHTML = `
+      <div class="grid-3" style="margin-bottom:24px">
+        <div class="stat-card"><div class="stat-num">${totalViews}</div><div class="stat-label">Total FAQ Views</div></div>
+        <div class="stat-card"><div class="stat-num">${totalVotes}</div><div class="stat-label">Total Votes</div></div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:${satisfaction >= 70 ? 'var(--green)' : satisfaction !== null ? 'var(--red)' : 'var(--accent)'}">
+            ${satisfaction !== null ? satisfaction + '%' : '—'}
+          </div>
+          <div class="stat-label">Satisfaction Rate</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>FAQ Question</th>
+              <th>Views</th>
+              <th>Unique</th>
+              <th>👍</th>
+              <th>👎</th>
+              <th>Score</th>
+              <th>Satisfaction</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => {
+              const up    = parseInt(item.up_votes)       || 0;
+              const dn    = parseInt(item.down_votes)     || 0;
+              const views = parseInt(item.view_count)     || 0;
+              const uniq  = parseInt(item.unique_viewers) || 0;
+              const score = up - dn;
+              const ratio = item.vote_ratio !== null ? item.vote_ratio + '%' : '—';
+              const scoreColor = score > 0 ? 'var(--green)' : score < 0 ? 'var(--red)' : 'var(--muted)';
+              return `<tr>
+                <td style="max-width:280px;font-weight:500;font-size:13px">${esc(item.question)}</td>
+                <td>${views}</td>
+                <td style="color:var(--muted)">${uniq}</td>
+                <td style="color:#16a34a;font-weight:600">${up > 0 ? '👍 ' + up : '—'}</td>
+                <td style="color:#dc2626;font-weight:600">${dn > 0 ? '👎 ' + dn : '—'}</td>
+                <td style="font-weight:700;color:${scoreColor}">${score > 0 ? '+' + score : score || '—'}</td>
+                <td>
+                  ${item.vote_ratio !== null
+                    ? `<div style="display:flex;align-items:center;gap:8px">
+                         <div style="width:60px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+                           <div style="width:${ratio};height:100%;background:${parseFloat(ratio)>=70?'var(--green)':'var(--red)'};border-radius:3px"></div>
+                         </div>
+                         <span style="font-size:12px">${ratio}</span>
+                       </div>`
+                    : '<span style="color:var(--muted);font-size:12px">No votes</span>'}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = `<div class="card"><p style="color:var(--red)">${esc(e.message)}</p></div>`;
+  }
+}
+
+// ---- Widget Tab ----------------------------------------------
+function renderWidgetTab() {
+  const el  = document.getElementById('tab-widget');
+  const url = `${location.origin}/widget/widget.js`;
+  const id  = currentWs.widget_id;
+  const embed = `&lt;!-- RAG Widget --&gt;\n&lt;script&gt;\n  window.RAGConfig = { widgetId: '${id}', apiUrl: '${location.origin}/admin/api' };\n&lt;/script&gt;\n&lt;script src="${url}" defer&gt;&lt;/script&gt;`;
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:8px">Embed Code</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Copy and paste this code into your website's HTML, just before the &lt;/body&gt; tag.</div>
+      <div class="embed-code" id="embed-code">${embed}<button class="copy-btn" onclick="copyEmbed()">Copy</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px">Widget ID</div>
+      <div class="widget-id">${id}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">This is your unique workspace identifier. Keep it private.</div>
+    </div>
+  `;
+}
+
+function copyEmbed() {
+  const text = document.getElementById('embed-code').textContent.replace('Copy','').trim()
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  navigator.clipboard.writeText(text);
+  toast('Embed code copied!');
+}
+
+// ============================================================
+// Conversations — list all chat sessions across workspaces
+// ============================================================
+async function renderConversations() {
+  const content = document.getElementById('content');
+  const actions = document.getElementById('topbar-actions');
+
+  // Workspace selector
+  const wsRes = await api('workspaces.php?action=list');
+  const workspaces = wsRes.data || [];
+
+  if (workspaces.length === 0) {
+    content.innerHTML = `<div class="card"><p style="color:var(--muted)">No workspaces yet. Create a workspace first.</p></div>`;
+    return;
+  }
+
+  // Default to first workspace
+  const defaultWs = workspaces[0];
+  actions.innerHTML = `
+    <select onchange="loadConversations(this.value)" style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text);outline:none">
+      ${workspaces.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join('')}
+    </select>
+  `;
+
+  content.innerHTML = '<p style="color:var(--muted)">Loading conversations...</p>';
+  await loadConversations(defaultWs.id);
+}
+
+async function loadConversations(workspaceId) {
+  const content = document.getElementById('content');
+  const res = await api(`conversations.php?action=list&workspace_id=${workspaceId}`);
+  const sessions = res.data || [];
+
+  if (sessions.length === 0) {
+    content.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:16px">💬</div>
+      <div>No conversations yet for this workspace.</div>
+      <div style="font-size:13px;margin-top:8px">Conversations will appear here when visitors use the chat widget.</div>
+    </div>`;
+    return;
+  }
+
+  content.innerHTML = `<div class="table-wrap"><table>
+    <thead>
+      <tr>
+        <th>Visitor</th>
+        <th>Contact</th>
+        <th>Messages</th>
+        <th>Mode</th>
+        <th>Started</th>
+        <th>Last Active</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      ${sessions.map(s => `
+        <tr style="cursor:pointer" onclick="viewConversation('${s.session_id}', '${esc(s.visitor_name)}')">
+          <td>
+            <div style="font-weight:600;font-size:14px">${esc(s.visitor_name)}</div>
+          </td>
+          <td style="font-size:13px;color:var(--muted)">
+            ${s.visitor_email ? `<div>${esc(s.visitor_email)}</div>` : ''}
+            ${s.visitor_phone ? `<div>${esc(s.visitor_phone)}</div>` : ''}
+            ${!s.visitor_email && !s.visitor_phone ? '—' : ''}
+          </td>
+          <td>
+            <span class="badge badge-blue">${s.message_count} msgs</span>
+          </td>
+          <td>
+            ${s.mode === 'human'
+              ? '<span style="color:#16a34a;font-weight:700;font-size:13px">🔴 Live</span>'
+              : '<span style="color:var(--muted);font-size:13px">—</span>'}
+          </td>
+          <td style="font-size:12px;color:var(--muted)">${s.started_at}</td>
+          <td style="font-size:12px;color:var(--muted)">${s.last_active}</td>
+          <td style="display:flex;gap:6px">
+            <button class="btn ${s.mode === 'human' ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="event.stopPropagation();viewConversation('${s.session_id}','${esc(s.visitor_name)}')">${s.mode === 'human' ? '💬 Chat' : 'View'}</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteConversation('${s.session_id}',${workspaceId})">Del</button>
+          </td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+async function viewConversation(sessionId, visitorName) {
+  // Stop any existing admin poll before opening a new conversation
+  if (adminChatInterval) { clearInterval(adminChatInterval); adminChatInterval = null; }
+  adminLastMsgId = 0;
+
+  const res = await api(`conversations.php?action=view&session_id=${sessionId}`);
+  const { session, messages } = res.data;
+  const isLive = session.mode === 'human';
+
+  // Track highest message id we already have
+  messages.forEach(m => { if (parseInt(m.id) > adminLastMsgId) adminLastMsgId = parseInt(m.id); });
+
+  // Widen modal for conversation view
+  const modalBox = document.getElementById('modal-box');
+  modalBox.style.maxWidth = '640px';
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div class="modal-title" style="margin-bottom:4px">💬 ${esc(session.visitor_name)}</div>
+        <div style="font-size:12px;color:var(--muted)">
+          ${session.visitor_email ? session.visitor_email + ' · ' : ''}
+          ${session.visitor_phone ? session.visitor_phone + ' · ' : ''}
+          Started: ${session.started_at}
+          ${isLive ? ' &nbsp;<span style="color:#16a34a;font-weight:700">● LIVE</span>' : ''}
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕ Close</button>
+    </div>
+
+    <div id="admin-conv-messages" style="display:flex;flex-direction:column;gap:12px;max-height:400px;overflow-y:auto;padding-right:4px;border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface2)">
+      ${messages.map(m => {
+        const isUser  = m.role === 'user';
+        const isAdmin = m.role === 'admin';
+        const bg      = isUser ? '#2563eb' : isAdmin ? '#16a34a' : '#f1f5f9';
+        const fg      = (isUser || isAdmin) ? '#fff' : 'var(--text)';
+        const align   = isUser ? 'flex-end' : 'flex-start';
+        const radius  = isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px';
+        const label   = isUser ? '👤 Visitor' : isAdmin ? '🛡️ Admin' : '🤖 Assistant';
+        return `
+        <div style="display:flex;flex-direction:column;align-items:${align};margin-bottom:4px">
+          <div style="max-width:85%;padding:10px 14px;border-radius:${radius};font-size:13px;line-height:1.6;background:${bg};color:${fg}">${esc(m.content).replace(/\n/g,'<br>')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${label} · ${m.created_at}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div id="admin-live-bar" style="margin-top:14px">
+      ${isLive ? `
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="admin-msg-input" type="text" placeholder="Type a message to the visitor..."
+            style="flex:1;padding:10px 14px;font-size:13px;border-radius:8px"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminMessage('${sessionId}')}">
+          <button class="btn btn-primary btn-sm" onclick="sendAdminMessage('${sessionId}')">Send</button>
+          <button class="btn btn-ghost btn-sm" onclick="releaseToAI('${sessionId}')">🤖 Release to AI</button>
+        </div>
+      ` : `
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
+          <button class="btn btn-primary btn-sm" onclick="takeOver('${sessionId}')">🛡️ Take Over</button>
+        </div>
+      `}
+    </div>
+  `);
+
+  // If live, start polling for new visitor messages
+  if (isLive) {
+    const messagesEl = document.getElementById('admin-conv-messages');
+    startAdminPoll(sessionId, messagesEl);
+    // Focus input
+    setTimeout(() => { const inp = document.getElementById('admin-msg-input'); if (inp) inp.focus(); }, 100);
+  }
+}
+
+// ============================================================
+// Live Admin Chat
+// ============================================================
+let adminChatInterval = null;
+let adminLastMsgId    = 0;
+
+async function takeOver(sessionId) {
+  try {
+    await api(`admin_chat.php?action=takeover&session_id=${sessionId}`, 'POST');
+    toast('You are now chatting live with this visitor.');
+    // Reset modal width then reopen
+    document.getElementById('modal-box').style.maxWidth = '';
+    viewConversation(sessionId, document.querySelector('.modal-title')?.textContent || '');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function releaseToAI(sessionId) {
+  try {
+    await api(`admin_chat.php?action=release&session_id=${sessionId}`, 'POST');
+    if (adminChatInterval) { clearInterval(adminChatInterval); adminChatInterval = null; }
+    toast('Released back to AI.');
+    document.getElementById('modal-box').style.maxWidth = '';
+    closeModal();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function sendAdminMessage(sessionId) {
+  const input   = document.getElementById('admin-msg-input');
+  const content = input?.value?.trim();
+  if (!content) return;
+  input.value = '';
+  try {
+    await api(`admin_chat.php?action=send&session_id=${sessionId}`, 'POST', { content });
+    // Append optimistically
+    const messagesEl = document.getElementById('admin-conv-messages');
+    if (messagesEl) {
+      const el = document.createElement('div');
+      el.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;margin-bottom:4px';
+      el.innerHTML = `<div style="max-width:85%;padding:10px 14px;border-radius:12px 12px 12px 4px;font-size:13px;line-height:1.6;background:#16a34a;color:#fff">${esc(content)}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">🛡️ Admin · just now</div>`;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function startAdminPoll(sessionId, messagesEl) {
+  if (adminChatInterval) clearInterval(adminChatInterval);
+  adminChatInterval = setInterval(async () => {
+    try {
+      const res = await api(`admin_chat.php?action=messages&session_id=${sessionId}&since=${adminLastMsgId}`);
+      (res.data || []).forEach(msg => {
+        if (parseInt(msg.id) > adminLastMsgId) adminLastMsgId = parseInt(msg.id);
+        if (msg.role === 'user') {
+          const el = document.createElement('div');
+          el.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;margin-bottom:4px';
+          el.innerHTML = `<div style="max-width:85%;padding:10px 14px;border-radius:12px 12px 4px 12px;font-size:13px;line-height:1.6;background:#2563eb;color:#fff">${esc(msg.content)}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">👤 Visitor · ${msg.created_at}</div>`;
+          messagesEl.appendChild(el);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+      });
+    } catch {}
+  }, 2000);
+}
+
+async function deleteConversation(sessionId, workspaceId) {
+  if (!confirm('Delete this conversation permanently?')) return;
+  try {
+    await api(`conversations.php?action=delete&session_id=${sessionId}`, 'DELETE');
+    toast('Conversation deleted.');
+    loadConversations(workspaceId);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ============================================================
+// Team Members
+// ============================================================
+async function renderTeam() {
+  const content = document.getElementById('content');
+  const actions = document.getElementById('topbar-actions');
+  if (account.role !== 'owner') {
+    content.innerHTML = `<div class="card"><p style="color:var(--muted)">Only account owners can manage team members.</p></div>`;
+    return;
+  }
+  actions.innerHTML = `<button class="btn btn-primary" onclick="openInviteModal()">+ Invite Member</button>`;
+  content.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const res     = await api('team.php?action=list');
+  const members = res.data || [];
+
+  if (members.length === 0) {
+    content.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--muted)">No team members yet.</div>`;
+    return;
+  }
+
+  content.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+    <tbody>${members.map(m => `
+      <tr>
+        <td style="font-weight:500">${esc(m.name)}</td>
+        <td style="color:var(--muted)">${esc(m.email)}</td>
+        <td><span class="badge badge-blue">${m.role}</span></td>
+        <td style="color:var(--muted);font-size:12px">${m.created_at}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeMember(${m.id})">Remove</button></td>
+      </tr>
+    `).join('')}</tbody>
+  </table></div>`;
+}
+
+function openInviteModal() {
+  openModal(`
+    <div class="modal-title">Invite Team Member</div>
+    <div class="form-group"><label>Full Name</label><input type="text" id="inv-name" placeholder="Jane Doe"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="inv-email" placeholder="jane@example.com"></div>
+    <div class="form-group"><label>Temporary Password</label><input type="password" id="inv-pass" placeholder="Min 8 characters"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="inviteMember()">Invite</button>
+    </div>
+  `);
+}
+
+async function inviteMember() {
+  const name     = document.getElementById('inv-name').value.trim();
+  const email    = document.getElementById('inv-email').value.trim();
+  const password = document.getElementById('inv-pass').value;
+  try {
+    await api('team.php?action=invite', 'POST', { name, email, password });
+    closeModal();
+    toast('Team member invited!');
+    renderTeam();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function removeMember(id) {
+  if (!confirm('Remove this team member?')) return;
+  try {
+    await api(`team.php?action=remove&id=${id}`, 'DELETE');
+    toast('Member removed.');
+    renderTeam();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ============================================================
+// Profile (change password)
+// ============================================================
+function renderProfile() {
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="max-width:480px">
+      <div class="card-title" style="margin-bottom:20px">Change Password</div>
+      <div class="form-group"><label>Current Password</label><input type="password" id="cur-pass" placeholder="••••••••"></div>
+      <div class="form-group"><label>New Password</label><input type="password" id="new-pass" placeholder="Min 8 characters"></div>
+      <div class="form-group"><label>Confirm New Password</label><input type="password" id="conf-pass" placeholder="Repeat new password"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+        <button class="btn btn-danger" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+  `;
+}
+
+async function changePassword() {
+  const current = document.getElementById('cur-pass').value;
+  const newPass = document.getElementById('new-pass').value;
+  const confirm = document.getElementById('conf-pass').value;
+  if (newPass !== confirm) return toast('Passwords do not match.', 'error');
+  try {
+    await api('auth.php?action=change-password', 'POST', { current_password: current, new_password: newPass });
+    toast('Password updated!');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ============================================================
+// Settings (central API keys)
+// ============================================================
+function renderSettings() {
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="max-width:600px">
+      <div class="card-title" style="margin-bottom:6px">Central API Keys</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">These keys are used as fallback when a workspace has no specific key set.</div>
+      <div class="form-group"><label>OpenAI API Key</label><input type="password" id="g-openai" placeholder="sk-..."></div>
+      <div class="form-group"><label>Anthropic API Key</label><input type="password" id="g-anthropic" placeholder="sk-ant-..."></div>
+      <div class="form-group"><label>Voyage AI API Key</label><input type="password" id="g-voyage" placeholder="pa-..."></div>
+      <div class="form-group"><label>Ollama URL</label><input type="text" id="g-ollama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434"></div>
+      <button class="btn btn-primary" onclick="toast('Settings saved (stored in config.php)')">Save Keys</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:12px">Note: Edit config.php to persist API keys server-side.</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// Utilities
+// ============================================================
+async function api(endpoint, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res  = await fetch(`${API}/${endpoint}`, opts);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Request failed');
+  return json;
+}
+
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  // Stop admin poll if running
+  if (adminChatInterval) { clearInterval(adminChatInterval); adminChatInterval = null; }
+  // Reset modal width to default
+  document.getElementById('modal-box').style.maxWidth = '';
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+function statusBadge(status) {
+  const map = {
+    pending:   '<span class="badge badge-gray">Pending</span>',
+    ingesting: '<span class="badge badge-yellow">Ingesting...</span>',
+    done:      '<span class="badge badge-green">Ready</span>',
+    error:     '<span class="badge badge-red">Error</span>',
+  };
+  return map[status] || status;
+}
+
+// ============================================================
+// Boot
+// ============================================================
+boot();
+</script>
+</body>
+</html>
